@@ -150,10 +150,16 @@ namespace tlr
         }
 
         // Create the window.
+#if defined(TLR_GL)
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+#elif defined(TLR_GLES2)
+        glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+#endif // TLR_GL
         glfwWindowHint(GLFW_DOUBLEBUFFER, GLFW_TRUE);
         //glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
         _glfwWindow = glfwCreateWindow(
@@ -174,10 +180,17 @@ namespace tlr
         _frameBufferSize.h = height;
         glfwGetWindowContentScale(_glfwWindow, &_contentScale.x, &_contentScale.y);
         glfwMakeContextCurrent(_glfwWindow);
+#if defined(TLR_GL)
         if (!gladLoaderLoadGL())
         {
             throw std::runtime_error("Cannot initialize GLAD");
         }
+#elif defined(TLR_GLES2)
+        if (!gladLoaderLoadGLES2())
+        {
+            throw std::runtime_error("Cannot initialize GLAD");
+        }
+#endif // TLR_GL
         /*GLint flags = 0;
         glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
         if (flags & static_cast<GLint>(GL_CONTEXT_FLAG_DEBUG_BIT))

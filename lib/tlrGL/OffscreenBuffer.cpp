@@ -53,6 +53,7 @@ namespace tlr
 
             GLenum target = GL_TEXTURE_2D;
             size_t samples = 0;
+#if defined(TLR_GL)
             switch (sampling)
             {
             case OffscreenSampling::_2:
@@ -73,6 +74,7 @@ namespace tlr
                 break;
             default: break;
             }
+#endif // TLR_GL
 
             if (colorType != imaging::PixelType::None)
             {
@@ -86,6 +88,7 @@ namespace tlr
                 glBindTexture(target, _colorID);
                 switch (sampling)
                 {
+#if defined(TLR_GL)
                 case OffscreenSampling::_2:
                 case OffscreenSampling::_4:
                 case OffscreenSampling::_8:
@@ -98,6 +101,7 @@ namespace tlr
                         size.h,
                         false);
                     break;
+#endif // TLR_GL
                 default:
                     glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
                     glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);

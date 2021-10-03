@@ -68,7 +68,11 @@ namespace tlr
                 GL_NONE,
 
                 GL_UNSIGNED_BYTE,
+#if defined(TLR_GL)
                 GL_UNSIGNED_INT_10_10_10_2,
+#else // TLR_GL
+                GL_NONE,
+#endif // TLR_GL
                 GL_UNSIGNED_SHORT,
                 GL_UNSIGNED_INT,
                 GL_HALF_FLOAT,

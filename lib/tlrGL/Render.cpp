@@ -563,6 +563,7 @@ namespace tlr
 
         void Render::setColorConfig(const ColorConfig& config)
         {
+#if defined(TLR_GL)
             TLR_PRIVATE_P();
             if (config == p.colorConfig)
                 return;
@@ -725,6 +726,7 @@ namespace tlr
             }
 
             p.shader.reset();
+#endif // TLR_GL
         }
 
         void Render::begin(const imaging::Size& size)
