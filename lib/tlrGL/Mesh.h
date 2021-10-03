@@ -4,9 +4,7 @@
 
 #pragma once
 
-#include <tlrCore/Util.h>
-
-#include <glad/gl.h>
+#include <tlrGL/Util.h>
 
 #include <memory>
 #include <vector>

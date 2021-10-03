@@ -4,7 +4,15 @@ project(glad LANGUAGES C)
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
-add_library(glad src/gl.c)
+if ("GL" STREQUAL TLR_GL_VERSION)
+    set(HEADERS include/glad/gl.h)
+    set(SOURCE src/gl.c)
+elseif ("GLES2" STREQUAL TLR_GL_VERSION)
+    set(HEADERS include/glad/gles2.h)
+    set(SOURCE src/gles2.c src/egl.c)
+endif()
+
+add_library(glad ${HEADERS} ${SOURCE})
 
 install(
     TARGETS glad
@@ -12,5 +20,8 @@ install(
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib)
 
-install(FILES include/glad/gl.h DESTINATION include/glad)
-install(FILES include/KHR/khrplatform.h DESTINATION include/KHR)
+install(FILES ${HEADERS} DESTINATION include/glad)
+if ("GLES2" STREQUAL TLR_GL_VERSION)
+    install(FILES include/KHR/khrplatform.h DESTINATION include/KHR)
+    install(FILES include/EGL/eglplatform.h DESTINATION include/EGL)
+endif()

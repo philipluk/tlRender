@@ -6,7 +6,11 @@
 
 #include <tlrCore/Image.h>
 
+#if defined(TLR_GL)
 #include <glad/gl.h>
+#elif defined(TLR_GLES2)
+#include <glad/gles2.h>
+#endif
 
 namespace tlr
 {

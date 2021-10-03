@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <tlrCore/Image.h>
+#include <tlrGL/Util.h>
 
-#include <glad/gl.h>
+#include <tlrCore/Image.h>
 
 #include <memory>
 

@@ -8,7 +8,11 @@
 #include <tlrCore/StringFormat.h>
 #include <tlrCore/Time.h>
 
+#if defined(TLR_GL)
 #include <glad/gl.h>
+#elif defined(TLR_GLES2)
+#include <glad/gles2.h>
+#endif
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>

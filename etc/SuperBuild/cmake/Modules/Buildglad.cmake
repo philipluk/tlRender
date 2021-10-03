@@ -2,7 +2,9 @@ include(ExternalProject)
 
 set(glad_BUILD_SHARED_LIBS OFF)
 
-set(glad_ARGS ${TLR_EXTERNAL_ARGS})
+set(glad_ARGS
+    ${TLR_EXTERNAL_ARGS}
+    -DTLR_GL_VERSION=${TLR_GL_VERSION})
 
 ExternalProject_Add(
     glad

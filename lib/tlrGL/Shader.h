@@ -4,11 +4,11 @@
 
 #pragma once
 
+#include <tlrGL/Util.h>
+
 #include <tlrCore/Matrix.h>
 #include <tlrCore/Util.h>
 #include <tlrCore/Vector.h>
-
-#include <glad/gl.h>
 
 #include <memory>
 #include <string>
