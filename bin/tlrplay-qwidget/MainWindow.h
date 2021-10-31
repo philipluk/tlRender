@@ -4,7 +4,10 @@
 
 #pragma once
 
+#include "SecondaryWindow.h"
 #include "SettingsObject.h"
+
+#include <tlrQWidget/TimelineWidget.h>
 
 #include <tlrQt/TimelinePlayer.h>
 
@@ -26,7 +29,10 @@ namespace tlr
         MainWindow(
             SettingsObject*,
             qt::TimeObject*,
+            const std::shared_ptr<core::Context>&,
             QWidget* parent = nullptr);
+
+        ~MainWindow() override;
 
         void setColorConfig(const gl::ColorConfig&);
 
@@ -52,7 +58,8 @@ namespace tlr
         void _resize1280x720Callback();
         void _resize1920x1080Callback();
         void _fullScreenCallback();
-        void _settingsVisibleCallback(bool);
+        void _secondaryWindowCallback(bool);
+        void _secondaryWindowDestroyedCallback();
         void _currentTabCallback(int);
         void _closeTabCallback(int);
         void _playbackCallback(QAction*);
@@ -71,6 +78,9 @@ namespace tlr
         void _frameNextCallback();
         void _frameNextX10Callback();
         void _frameNextX100Callback();
+        void _imageOptionsCallback(const tlr::gl::ImageOptions&);
+        void _imageOptionsVisibleCallback(bool);
+        void _settingsVisibleCallback(bool);
         void _saveSettingsCallback();
 
     private:
@@ -81,8 +91,10 @@ namespace tlr
         void _playbackUpdate();
         void _timelineUpdate();
 
+        std::weak_ptr<core::Context> _context;
         QList<qt::TimelinePlayer*> _timelinePlayers;
         qt::TimelinePlayer* _currentTimelinePlayer = nullptr;
+        QList<qwidget::TimelineWidget*> _timelineWidgets;
         QMap<QString, QAction*> _actions;
         QActionGroup* _recentFilesActionGroup = nullptr;
         QMap<QAction*, QString> _actionToRecentFile;
@@ -97,6 +109,7 @@ namespace tlr
         QMap<QAction*, timeline::Loop> _actionToLoop;
         QMap<timeline::Loop, QAction*> _loopToActions;
         QTabWidget* _tabWidget = nullptr;
+        SecondaryWindow* _secondaryWindow = nullptr;
         gl::ColorConfig _colorConfig;
         SettingsObject* _settingsObject = nullptr;
         qt::TimeObject* _timeObject = nullptr;

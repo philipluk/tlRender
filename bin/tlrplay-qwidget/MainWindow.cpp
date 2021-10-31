@@ -5,9 +5,8 @@
 #include "MainWindow.h"
 
 #include "App.h"
+#include "ImageOptionsWidget.h"
 #include "SettingsWidget.h"
-
-#include <tlrQWidget/TimelineWidget.h>
 
 #include <tlrCore/File.h>
 #include <tlrCore/String.h>
@@ -30,6 +29,7 @@ namespace tlr
     MainWindow::MainWindow(
         SettingsObject* settingsObject,
         qt::TimeObject* timeObject,
+        const std::shared_ptr<core::Context>& context,
         QWidget* parent) :
         QMainWindow(parent),
         _settingsObject(settingsObject),
@@ -37,6 +37,8 @@ namespace tlr
     {
         setFocusPolicy(Qt::ClickFocus);
         setAcceptDrops(true);
+
+        _context = context;
 
         _actions["File/Open"] = new QAction(this);
         _actions["File/Open"]->setText(tr("Open"));
@@ -55,9 +57,6 @@ namespace tlr
         _recentFilesActionGroup = new QActionGroup(this);
         _layersActionGroup = new QActionGroup(this);
         _layersActionGroup->setExclusive(true);
-        _actions["File/Settings"] = new QAction(this);
-        _actions["File/Settings"]->setText(tr("Settings"));
-        _actions["File/Settings"]->setCheckable(true);
         _actions["File/Exit"] = new QAction(this);
         _actions["File/Exit"]->setText(tr("Exit"));
         _actions["File/Exit"]->setShortcut(QKeySequence::Quit);
@@ -69,6 +68,10 @@ namespace tlr
         _actions["Window/FullScreen"] = new QAction(this);
         _actions["Window/FullScreen"]->setText(tr("Toggle Full Screen"));
         _actions["Window/FullScreen"]->setShortcut(QKeySequence(Qt::Key_U));
+        _actions["Window/Secondary"] = new QAction(this);
+        _actions["Window/Secondary"]->setCheckable(true);
+        _actions["Window/Secondary"]->setText(tr("Secondary Window"));
+        _actions["Window/Secondary"]->setShortcut(QKeySequence(Qt::Key_Y));
 
         _actions["Playback/Stop"] = new QAction(this);
         _actions["Playback/Stop"]->setCheckable(true);
@@ -171,6 +174,13 @@ namespace tlr
         _actions["InOutPoints/ResetOutPoint"]->setIcon(QIcon(":/Icons/Reset.svg"));
         _actions["InOutPoints/ResetOutPoint"]->setShortcut(QKeySequence(Qt::SHIFT + Qt::Key_O));
 
+        _actions["Tools/ImageOptions"] = new QAction(this);
+        _actions["Tools/ImageOptions"]->setCheckable(true);
+        _actions["Tools/ImageOptions"]->setText(tr("Image Options"));
+        _actions["Tools/Settings"] = new QAction(this);
+        _actions["Tools/Settings"]->setCheckable(true);
+        _actions["Tools/Settings"]->setText(tr("Settings"));
+
         auto fileMenu = new QMenu;
         fileMenu->setTitle(tr("&File"));
         fileMenu->addAction(_actions["File/Open"]);
@@ -188,8 +198,6 @@ namespace tlr
         _layersMenu->setTitle(tr("&Layers"));
         fileMenu->addMenu(_layersMenu);
         fileMenu->addSeparator();
-        fileMenu->addAction(_actions["File/Settings"]);
-        fileMenu->addSeparator();
         fileMenu->addAction(_actions["File/Exit"]);
 
         auto windowMenu = new QMenu;
@@ -198,6 +206,7 @@ namespace tlr
         windowMenu->addAction(_actions["Window/Resize1920x1080"]);
         windowMenu->addSeparator();
         windowMenu->addAction(_actions["Window/FullScreen"]);
+        windowMenu->addAction(_actions["Window/Secondary"]);
 
         auto playbackMenu = new QMenu;
         playbackMenu->setTitle(tr("&Playback"));
@@ -229,17 +238,32 @@ namespace tlr
         inOutPointsMenu->addAction(_actions["InOutPoints/SetOutPoint"]);
         inOutPointsMenu->addAction(_actions["InOutPoints/ResetOutPoint"]);
 
+        auto toolsMenu = new QMenu;
+        toolsMenu->setTitle(tr("&Tools"));
+        toolsMenu->addAction(_actions["Tools/ImageOptions"]);
+        toolsMenu->addAction(_actions["Tools/Settings"]);
+
         auto menuBar = new QMenuBar;
         menuBar->addMenu(fileMenu);
         menuBar->addMenu(windowMenu);
         menuBar->addMenu(playbackMenu);
         menuBar->addMenu(timeMenu);
         menuBar->addMenu(inOutPointsMenu);
+        menuBar->addMenu(toolsMenu);
         setMenuBar(menuBar);
 
         _tabWidget = new QTabWidget;
         _tabWidget->setTabsClosable(true);
         setCentralWidget(_tabWidget);
+
+        auto imageOptionsWidget = new ImageOptionsWidget();
+        auto imageOptionsDockWidget = new QDockWidget;
+        imageOptionsDockWidget->setObjectName("ImageOptions");
+        imageOptionsDockWidget->setWindowTitle(tr("Image Options"));
+        imageOptionsDockWidget->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+        imageOptionsDockWidget->setWidget(imageOptionsWidget);
+        imageOptionsDockWidget->hide();
+        addDockWidget(Qt::RightDockWidgetArea, imageOptionsDockWidget);
 
         auto settingsWidget = new SettingsWidget(settingsObject, _timeObject);
         auto settingsDockWidget = new QDockWidget;
@@ -284,11 +308,6 @@ namespace tlr
             SIGNAL(triggered(QAction*)),
             SLOT(_layersCallback(QAction*)));
         connect(
-            _actions["File/Settings"],
-            SIGNAL(triggered(bool)),
-            settingsDockWidget,
-            SLOT(setVisible(bool)));
-        connect(
             _actions["File/Exit"],
             SIGNAL(triggered()),
             qApp,
@@ -306,6 +325,10 @@ namespace tlr
             _actions["Window/FullScreen"],
             SIGNAL(triggered()),
             SLOT(_fullScreenCallback()));
+        connect(
+            _actions["Window/Secondary"],
+            SIGNAL(toggled(bool)),
+            SLOT(_secondaryWindowCallback(bool)));
 
         connect(
             _actions["Playback/Stop"],
@@ -358,6 +381,17 @@ namespace tlr
             SLOT(_frameNextX100Callback()));
 
         connect(
+            _actions["Tools/ImageOptions"],
+            SIGNAL(triggered(bool)),
+            imageOptionsDockWidget,
+            SLOT(setVisible(bool)));
+        connect(
+            _actions["Tools/Settings"],
+            SIGNAL(triggered(bool)),
+            settingsDockWidget,
+            SLOT(setVisible(bool)));
+
+        connect(
             _playbackActionGroup,
             SIGNAL(triggered(QAction*)),
             SLOT(_playbackCallback(QAction*)));
@@ -375,6 +409,15 @@ namespace tlr
             _tabWidget,
             SIGNAL(tabCloseRequested(int)),
             SLOT(_closeTabCallback(int)));
+
+        connect(
+            imageOptionsWidget,
+            SIGNAL(imageOptionsChanged(const tlr::gl::ImageOptions&)),
+            SLOT(_imageOptionsCallback(const tlr::gl::ImageOptions&)));
+        connect(
+            imageOptionsDockWidget,
+            SIGNAL(visibilityChanged(bool)),
+            SLOT(_imageOptionsVisibleCallback(bool)));
 
         connect(
             settingsDockWidget,
@@ -416,14 +459,34 @@ namespace tlr
         }
     }
 
+    MainWindow::~MainWindow()
+    {
+        if (_secondaryWindow)
+        {
+            delete _secondaryWindow;
+            _secondaryWindow = nullptr;
+        }
+    }
+
     void MainWindow::setColorConfig(const gl::ColorConfig& colorConfig)
     {
+        if (colorConfig != _colorConfig)
+            return;
         _colorConfig = colorConfig;
+        if (_secondaryWindow)
+        {
+            _secondaryWindow->setColorConfig(_colorConfig);
+        }
     }
 
     void MainWindow::closeEvent(QCloseEvent* event)
     {
         _saveSettingsCallback();
+        if (_secondaryWindow)
+        {
+            delete _secondaryWindow;
+            _secondaryWindow = nullptr;
+        }
         QMainWindow::closeEvent(event);
     }
 
@@ -496,7 +559,7 @@ namespace tlr
 
     void MainWindow::_openedCallback(qt::TimelinePlayer* timelinePlayer)
     {
-        if (auto context = timelinePlayer->context().lock())
+        if (auto context = _context.lock())
         {
             auto widget = new qwidget::TimelineWidget(context);
             widget->setTimeObject(_timeObject);
@@ -508,6 +571,7 @@ namespace tlr
             const std::string toolTip = string::Format("{0}\n{1}").arg(path.get()).arg(!videoInfo.empty() ? videoInfo[0] : imaging::Info());
             _tabWidget->setTabToolTip(tab, QString::fromUtf8(toolTip.c_str()));
             _timelinePlayers.append(timelinePlayer);
+            _timelineWidgets.append(widget);
             _setCurrentTimeline(timelinePlayer);
         }
     }
@@ -536,7 +600,8 @@ namespace tlr
             auto widget = _tabWidget->widget(i);
             _tabWidget->removeTab(i);
             delete widget;
-            _timelinePlayers.removeOne(timelinePlayer);
+            _timelinePlayers.removeAt(i);
+            _timelineWidgets.removeAt(i);
             if (timelinePlayer == _currentTimelinePlayer)
             {
                 if (i > _timelinePlayers.size())
@@ -630,9 +695,36 @@ namespace tlr
         setWindowState(windowState() ^ Qt::WindowFullScreen);
     }
 
-    void MainWindow::_settingsVisibleCallback(bool value)
+    void MainWindow::_secondaryWindowCallback(bool value)
     {
-        _actions["File/Settings"]->setChecked(value);
+        if (value && !_secondaryWindow)
+        {
+            if (auto context = _context.lock())
+            {
+                _secondaryWindow = new SecondaryWindow(context);
+                _secondaryWindow->setColorConfig(_colorConfig);
+                _secondaryWindow->setTimelinePlayer(_currentTimelinePlayer);
+
+                connect(
+                    _secondaryWindow,
+                    SIGNAL(destroyed(QObject*)),
+                    SLOT(_secondaryWindowDestroyedCallback()));
+
+                _secondaryWindow->resize(1280, 720);
+                _secondaryWindow->show();
+            }
+        }
+        else if (!value && _secondaryWindow)
+        {
+            delete _secondaryWindow;
+            _secondaryWindow = nullptr;
+        }
+    }
+
+    void MainWindow::_secondaryWindowDestroyedCallback()
+    {
+        _secondaryWindow = nullptr;
+        _actions["Window/Secondary"]->setChecked(false);
     }
 
     void MainWindow::_currentTabCallback(int index)
@@ -794,6 +886,24 @@ namespace tlr
         }
     }
 
+    void MainWindow::_imageOptionsCallback(const tlr::gl::ImageOptions& value)
+    {
+        for (int i = 0; i < _timelineWidgets.count(); ++i)
+        {
+            _timelineWidgets[i]->setImageOptions(value);
+        }
+    }
+
+    void MainWindow::_imageOptionsVisibleCallback(bool value)
+    {
+        _actions["Tools/ImageOptions"]->setChecked(value);
+    }
+
+    void MainWindow::_settingsVisibleCallback(bool value)
+    {
+        _actions["Tools/Settings"]->setChecked(value);
+    }
+
     void MainWindow::_saveSettingsCallback()
     {
         QSettings settings;
@@ -953,7 +1063,6 @@ namespace tlr
 
         if (_currentTimelinePlayer)
         {
-
             _actions["Playback/Stop"]->setEnabled(true);
             _actions["Playback/Forward"]->setEnabled(true);
             _actions["Playback/Reverse"]->setEnabled(true);
@@ -1020,5 +1129,10 @@ namespace tlr
         }
 
         _tabWidget->setCurrentIndex(_timelinePlayers.indexOf(_currentTimelinePlayer));
+
+        if (_secondaryWindow)
+        {
+            _secondaryWindow->setTimelinePlayer(_currentTimelinePlayer);
+        }
     }
 }

@@ -43,6 +43,19 @@ namespace tlr
             bool operator != (const ColorConfig&) const;
         };
 
+        //! YUV value range.
+        enum class YUVRange
+        {
+            FromFile,
+            Full,
+            Video,
+
+            Count,
+            First = FromFile
+        };
+        TLR_ENUM(YUVRange);
+        TLR_ENUM_SERIALIZE(YUVRange);
+
         //! Image channels display.
         enum class ImageChannelsDisplay
         {
@@ -117,6 +130,7 @@ namespace tlr
         //! Image options.
         struct ImageOptions
         {
+            YUVRange             yuvRange        = YUVRange::FromFile;
             ImageChannelsDisplay channelsDisplay = ImageChannelsDisplay::Color;
             //! \todo Implement alpha blending options.
             AlphaBlend           alphaBlend      = AlphaBlend::Straight;
@@ -178,7 +192,7 @@ namespace tlr
             //! Draw a timeline frame.
             void drawFrame(
                 const timeline::Frame&,
-                const ImageOptions & = ImageOptions());
+                const ImageOptions& = ImageOptions());
 
             //! Draw text.
             void drawText(

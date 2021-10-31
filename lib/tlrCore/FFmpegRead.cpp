@@ -291,6 +291,7 @@ namespace tlr
                     videoInfo.pixelType = imaging::PixelType::RGBA_U8;
                     break;
                 default:
+                {
                     videoInfo.pixelType = imaging::PixelType::YUV_420P;
                     p.avFrame2 = av_frame_alloc();
                     p.swsContext = sws_getContext(
@@ -304,7 +305,31 @@ namespace tlr
                         0,
                         0,
                         0);
+                    const int srcColorRange = p.avCodecContext[p.avVideoStream]->color_range;
+                    int srcColorSpace = SWS_CS_DEFAULT;
+                    if (p.avCodecContext[p.avVideoStream]->color_primaries != AVCOL_PRI_UNSPECIFIED)
+                    {
+                        switch (p.avCodecContext[p.avVideoStream]->colorspace)
+                        {
+                        case AVCOL_SPC_BT709: srcColorSpace = SWS_CS_ITU709; break;
+                        default: break;
+                        }
+                    }
+                    sws_setColorspaceDetails(
+                        p.swsContext,
+                        sws_getCoefficients(srcColorSpace),
+                        AVCOL_RANGE_JPEG == srcColorRange ? 1 : 0,
+                        sws_getCoefficients(SWS_CS_DEFAULT),
+                        1,
+                        0,
+                        1 << 16,
+                        1 << 16);
                     break;
+                }
+                }
+                if (p.avCodecContext[p.avVideoStream]->color_range != AVCOL_RANGE_JPEG)
+                {
+                    videoInfo.yuvRange = imaging::YUVRange::Video;
                 }
 
                 if (avVideoStream->duration != AV_NOPTS_VALUE)
@@ -534,7 +559,7 @@ namespace tlr
                     return out;
                 }
 
-                const auto& videoInfo = info.video[0];
+                auto videoInfo = info.video[0];
                 const auto t = otime::RationalTime(
                     av_rescale_q(
                         avFrame->pts,
@@ -544,7 +569,7 @@ namespace tlr
                 if (t >= time)
                 {
                     //std::cout << "frame: " << t << std::endl;
-                    auto tmp = image && image->getInfo() == info.video[0] ? image : imaging::Image::create(videoInfo);
+                    auto tmp = image && image->getInfo() == videoInfo ? image : imaging::Image::create(videoInfo);
                     tmp->setTags(info.tags);
                     copyVideo(tmp);
                     imageBuffer.push_back(tmp);
