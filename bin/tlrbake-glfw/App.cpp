@@ -207,11 +207,18 @@ namespace tlr
             throw std::runtime_error("Cannot create window");
         }
         glfwMakeContextCurrent(_glfwWindow);
+#if defined(TLR_GL)
         if (!gladLoaderLoadGL())
         {
             throw std::runtime_error("Cannot initialize GLAD");
         }
-        /*GLint flags = 0;
+#elif defined(TLR_GLES2)
+        if (!gladLoaderLoadGLES2())
+        {
+            throw std::runtime_error("Cannot initialize GLAD");
+        }
+#endif // TLR_GL
+	/*GLint flags = 0;
         glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
         if (flags & static_cast<GLint>(GL_CONTEXT_FLAG_DEBUG_BIT))
         {
@@ -290,8 +297,10 @@ namespace tlr
         _render->end();
 
         // Write the frame.
+#if defined(TLR_GL)
         glPixelStorei(GL_PACK_ALIGNMENT, _outputInfo.layout.alignment);
         glPixelStorei(GL_PACK_SWAP_BYTES, _outputInfo.layout.endian != memory::getEndian());
+#endif // TLR_GL
         const GLenum format = gl::getReadPixelsFormat(_outputInfo.pixelType);
         const GLenum type = gl::getReadPixelsType(_outputInfo.pixelType);
         if (GL_NONE == format || GL_NONE == type)
